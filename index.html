@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RCB Lucky Ritual Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <base href="/">
+  <style>
+    body {
+      background: linear-gradient(to bottom, #ff0000, #000000);
+      color: #ffffff;
+      font-family: 'Arial', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      overflow-x: hidden;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 100%;
+      width: 90%;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+      border: 2px solid #ffd700;
+      display: none;
+    }
+    .container.loaded {
+      display: block;
+    }
+    #ritualOutput {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #ffd700;
+      margin: 1.5rem 0;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #ritualOutput.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .share-btn {
+      background: #ffd700;
+      color: #000;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 0.5rem;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+    .share-btn:hover {
+      background: #ff0000;
+      color: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 0 10px #ff0000;
+    }
+    img {
+      max-width: 120px;
+      margin: 1.5rem auto;
+      transition: transform 0.3s ease;
+    }
+    img:hover {
+      transform: scale(1.15);
+    }
+    .quote {
+      font-style: italic;
+      color: #ffd700;
+      margin: 1rem 0;
+      font-size: 1rem;
+    }
+    .ad-placeholder {
+      background: #333;
+      padding: 0.75rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      border: 1px solid #ffd700;
+      font-size: 0.9rem;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://upload.wikimedia.org/wikipedia/en/0/02/Royal_Challengers_Bangalore_2020_logo.svg') center/150px repeat;
+      opacity: 0.1;
+      animation: pulse 4s infinite;
+      z-index: -1;
+    }
+    .input-group {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .input-group label {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #ffd700;
+      text-shadow: 0 0 5px #ff0000;
+      display: block;
+      margin-bottom: 0.5rem;
+      transition: transform 0.3s ease;
+    }
+    .input-group:hover label {
+      transform: translateY(-5px);
+    }
+    input, select {
+      background: rgba(255, 255, 255, 0.9);
+      color: #000;
+      padding: 0.5rem;
+      border-radius: 6px;
+      width: 100%;
+      border: 2px solid #ffd700;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 0.8rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #ff0000;
+      box-shadow: 0 0 8px #ff0000;
+    }
+    .get-ritual-btn {
+      background: linear-gradient(to right, #ffd700, #ff4500);
+      color: #000;
+      font-weight: bold;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px #ffd700;
+    }
+    .get-ritual-btn:hover:not(:disabled) {
+      background: linear-gradient(to right, #ff0000, #ffd700);
+      transform: scale(1.1);
+      box-shadow: 0 0 15px #ff0000;
+    }
+    .get-ritual-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .warning-text {
+      color: #ff0000;
+      font-weight: bold;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+    .error-message {
+      color: #ff0000;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+    .fallback-message, .loading-message {
+      color: #ff0000;
+      font-size: 1rem;
+      text-align: center;
+      margin: 2rem;
+    }
+    .loading-message {
+      display: block;
+    }
+    .fallback-message {
+      display: none;
+    }
+    @media (max-width: 640px) {
+      body {
+        padding: 0.5rem;
+      }
+      .container {
+        padding: 1rem;
+        width: 95%;
+      }
+      #ritualOutput {
+        font-size: 1.2rem;
+      }
+      .share-btn {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+      }
+      img {
+        max-width: 100px;
+      }
+      .input-group label {
+        font-size: 0.9rem;
+      }
+      input, select {
+        padding: 0.4rem;
+        font-size: 0.8rem;
+      }
+      .get-ritual-btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div id="loadingMessage" class="loading-message">
+    Loading RCB Lucky Ritual Generator...
+  </div>
+  <div id="fallbackMessage" class="fallback-message">
+    Oops, something went wrong! Please try again later or check your internet connection.
+  </div>
+  <div id="container" class="container">
+    <img src="https://upload.wikimedia.org/wikipedia/en/0/02/Royal_Challengers_Bangalore_2020_logo.svg" 
+         onerror="this.onerror=null; this.src='https://www.royalchallengers.com/RCB_Images/logo/RCB_Logo_2020.svg'; 
+         if(this.complete && this.naturalHeight===0) {this.src='https://www.pngitem.com/pimgs/m/443-4435482_rcb-logo-png-royal-challengers-bangalore-logo-2020.png'; console.log('Logo switched to PNG fallback');}" 
+         onload="console.log('Logo loaded successfully:', this.src)" 
+         alt="RCB Logo">
+    <h1 class="text-4xl md:text-5xl font-bold mb-4 text-yellow-400 text-shadow-lg">RCB Lucky Ritual Generator</h1>
+    <p class="mb-4 text-lg md:text-xl">Answer a few quick questions to get your desi ritual for RCB to win IPL 2025!</p>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input type="text" id="name" class="p-2 rounded w-full text-black" placeholder="e.g., Rohan Sharma" required>
+      <p id="nameError" class="error-message">Please enter your name.</p>
+    </div>
+    <div class="input-group">
+      <label>Your Mobile Number</label>
+      <input type="tel" id="mobile" class="p-2 rounded w-full text-black" placeholder="e.g., 9876543210" pattern="[0-9]{10}" required>
+      <p id="mobileError" class="error-message">Please enter a valid 10-digit mobile number.</p>
+    </div>
+    <div class="input-group">
+      <label>Who's your favorite RCB player? (2025 Squad)</label>
+      <select id="player" class="p-2 rounded w-full text-black">
+        <option value="Virat Kohli">Virat Kohli</option>
+        <option value="Rajat Patidar">Rajat Patidar</option>
+        <option value="Yash Dayal">Yash Dayal</option>
+        <option value="Liam Livingstone">Liam Livingstone</option>
+        <option value="Phil Salt">Phil Salt</option>
+        <option value="Jitesh Sharma">Jitesh Sharma</option>
+        <option value="Josh Hazlewood">Josh Hazlewood</option>
+        <option value="Rasikh Dar">Rasikh Dar</option>
+        <option value="Suyash Sharma">Suyash Sharma</option>
+        <option value="Krunal Pandya">Krunal Pandya</option>
+        <option value="Bhuvneshwar Kumar">Bhuvneshwar Kumar</option>
+        <option value="Swapnil Singh">Swapnil Singh</option>
+        <option value="Tim David">Tim David</option>
+        <option value="Romario Shepherd">Romario Shepherd</option>
+        <option value="Manoj Bhandage">Manoj Bhandage</option>
+        <option value="Jacob Bethell">Jacob Bethell</option>
+        <option value="Devdutt Padikkal">Devdutt Padikkal</option>
+        <option value="Swastik Chhikara">Swastik Chhikara</option>
+        <option value="Lungi Ngidi">Lungi Ngidi</option>
+        <option value="Abhinandan Singh">Abhinandan Singh</option>
+        <option value="Mohit Rathee">Mohit Rathee</option>
+        <option value="Nuwan Thushara">Nuwan Thushara</option>
+        <option value="Tim Seifert">Tim Seifert</option>
+        <option value="Mayank Agarwal">Mayank Agarwal</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>What's your lucky number?</label>
+      <input type="number" id="number" class="p-2 rounded w-full text-black" min="1" max="99" placeholder="e.g., 7" required>
+      <p id="numberError" class="error-message">Please enter a number between 1 and 99.</p>
+    </div>
+    <div class="input-group">
+      <label>Your favorite match day activity?</label>
+      <select id="activity" class="p-2 rounded w-full text-black">
+        <option value="cheering at home">Cheering at home</option>
+        <option value="watching at stadium">Watching at stadium</option>
+        <option value="posting on social media">Posting on social media</option>
+      </select>
+    </div>
+    <button id="generateBtn" class="get-ritual-btn mt-4">Get My Ritual!</button>
+    <div id="resultSection" class="mt-6 hidden">
+      <p id="ritualOutput"></p>
+      <p class="mb-4 text-base md:text-lg">Do this desi ritual to help RCB win IPL 2025! #RCBWin2025</p>
+      <p class="warning-text">Share this to at least 10 friends to make us win IPL!</p>
+      <p class="quote">"Ee Sala Cup Namde! Let's make it happen!" - RCB Fan</p>
+      <a id="xShare" class="share-btn" href="#" target="_blank">Share on X</a>
+      <a id="whatsappShare" class="share-btn" href="#" target="_blank">Share on WhatsApp</a>
+      <button onclick="resetForm()" class="share-btn">Try Another Ritual</button>
+      <div class="ad-placeholder">
+        <p>Support RCB! <a href="https://www.royalchallengers.com/shop" target="_blank" class="underline text-yellow-400">Buy Official RCB Merch</a></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Page loaded on device:', navigator.userAgent);
+
+      try {
+        const loadingMessage = document.getElementById('loadingMessage');
+        const fallbackMessage = document.getElementById('fallbackMessage');
+        const container = document.getElementById('container');
+
+        // Hide loading message and show container
+        setTimeout(() => {
+          if (loadingMessage) loadingMessage.style.display = 'none';
+          if (container) container.classList.add('loaded');
+        }, 500);
+
+        const rituals = [
+          "Light {number} diyas around your home and {activity} to bring luck to RCB!",
+          "Wear a red kurta with {number} bangles while {activity} for RCB's victory!",
+          "Chant 'Ee Sala Cup Namde' {number} times while {activity} to boost RCB's vibe!",
+          "Offer {number} laddoos to friends and {activity} to pray for RCB's win!",
+          "Place {number} marigold flowers near your TV while {activity} for RCB's success!",
+          "Eat {number} spicy vada pavs while {activity} to cheer for RCB!",
+          "Tie {number} red threads on your wrist and {activity} for RCB's glory!",
+          "Dance to 'Dhoom Machale' {number} times while {activity} to hype RCB!",
+          "Share #RCBWin2025 {number} times while {activity} to boost RCB's energy!",
+          "Paint {number} RCB logos on your face and {activity} for RCB's triumph!",
+          "Wear {number} red bindis and {activity} to power RCB's game!",
+          "Sing 'Chak De RCB' {number} times while {activity} for RCB's success!",
+          "Eat {number} plates of biryani while {activity} to fuel RCB's runs!",
+          "Wave {number} RCB flags and {activity} to bring luck to RCB!",
+          "Apply {number} red tilaks on your forehead and {activity} for RCB's win!",
+          "Shout 'RCB bole toh!' {number} times while {activity} to support RCB!",
+          "Drink {number} cups of masala chai and {activity} to cheer for RCB's sixes!",
+          "Wear {number} RCB tattoos and {activity} to boost RCB's performance!",
+          "Offer {number} coconuts at a temple and {activity} for RCB's victory!",
+          "Eat {number} pani puris and {activity} to bring luck to RCB!",
+          "Light {number} red candles and {activity} to pray for RCB's win!",
+          "Wear {number} red dupattas and {activity} to support RCB's game!",
+          "Share {number} RCB reels and {activity} to hype RCB's spirit!",
+          "Cook {number} dosas and {activity} to cheer for RCB's boundaries!",
+          "Wear {number} RCB wristbands and {activity} to bless RCB's innings!",
+          "Chant 'Jai RCB!' {number} times while {activity} to support RCB!",
+          "Hang {number} RCB posters and {activity} to bring luck to RCB!",
+          "Eat {number} jalebis and {activity} to fuel RCB's power hits!",
+          "Wear {number} red caps and {activity} to cheer for RCB's runs!",
+          "Sing 'RCB anthem' {number} times while {activity} for RCB's success!"
+        ];
+
+        async function generateRitual() {
+          console.log('generateRitual called');
+          const generateBtn = document.getElementById('generateBtn');
+          generateBtn.disabled = true;
+          generateBtn.innerText = 'Generating...';
+
+          // Reset error messages
+          document.getElementById('nameError').style.display = 'none';
+          document.getElementById('mobileError').style.display = 'none';
+          document.getElementById('numberError').style.display = 'none';
+          if (fallbackMessage) fallbackMessage.style.display = 'none';
+
+          const name = document.getElementById('name').value.trim();
+          const mobile = document.getElementById('mobile').value.trim();
+          const player = document.getElementById('player').value;
+          const number = document.getElementById('number').value;
+          const activity = document.getElementById('activity').value;
+
+          // Validate inputs
+          let hasError = false;
+          if (!name) {
+            document.getElementById('nameError').style.display = 'block';
+            hasError = true;
+          }
+          if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
+            document.getElementById('mobileError').style.display = 'block';
+            hasError = true;
+          }
+          if (!number || number < 1 || number > 99) {
+            document.getElementById('numberError').style.display = 'block';
+            hasError = true;
+          }
+          if (hasError) {
+            generateBtn.disabled = false;
+            generateBtn.innerText = 'Get My Ritual!';
+            return;
+          }
+
+          // Debug mobile number before sending
+          console.log('Mobile number to be sent:', mobile);
+
+          // Store data in SheetBest API
+          try {
+            console.log('Sending data to SheetBest:', { name, mobile, player, number, activity });
+            const response = await fetch('https://api.sheetbest.com/sheets/5b761459-f97e-41e6-967a-c75e6f49fc1c', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                Name: name,
+                Mobile: mobile,
+                FavoritePlayer: player,
+                LuckyNumber: number,
+                Activity: activity,
+                Timestamp: new Date().toISOString()
+              })
+            });
+            if (!response.ok) {
+              const errorData = await response.json();
+              console.error('SheetBest API error:', response.status, response.statusText, errorData);
+              throw new Error('API request failed');
+            } else {
+              console.log('Data saved to SheetBest successfully');
+            }
+          } catch (error) {
+            console.error('Error saving data to SheetBest:', error);
+            if (fallbackMessage) fallbackMessage.style.display = 'block';
+            generateBtn.disabled = false;
+            generateBtn.innerText = 'Get My Ritual!';
+            return;
+          }
+
+          // Generate and display ritual
+          const randomRitual = rituals[Math.floor(Math.random() * rituals.length)];
+          const ritualText = randomRitual
+            .replace('{number}', number)
+            .replace('{activity}', activity);
+          const ritualOutput = document.getElementById('ritualOutput');
+          const resultSection = document.getElementById('resultSection');
+          
+          if (ritualOutput && resultSection) {
+            ritualOutput.innerText = ritualText;
+            resultSection.classList.remove('hidden');
+            ritualOutput.classList.add('show');
+
+            // Update share links
+            const shareText = encodeURIComponent(`My desi RCB ritual: ${ritualText} I’m doing this to help RCB win IPL 2025! Join me! #RCBWin2025`);
+            document.getElementById('xShare').href = `https://x.com/intent/tweet?text=${shareText}`;
+            document.getElementById('whatsappShare').href = `https://wa.me/?text=${shareText}`;
+          } else {
+            console.error('DOM elements missing:', { ritualOutput, resultSection });
+            if (fallbackMessage) fallbackMessage.style.display = 'block';
+          }
+
+          generateBtn.disabled = false;
+          generateBtn.innerText = 'Get My Ritual!';
+        }
+
+        function resetForm() {
+          console.log('resetForm called');
+          const resultSection = document.getElementById('resultSection');
+          const ritualOutput = document.getElementById('ritualOutput');
+          const fallbackMessage = document.getElementById('fallbackMessage');
+          if (resultSection && ritualOutput) {
+            resultSection.classList.add('hidden');
+            ritualOutput.classList.remove('show');
+          }
+          if (fallbackMessage) {
+            fallbackMessage.style.display = 'none';
+          }
+          document.getElementById('name').value = '';
+          document.getElementById('mobile').value = '';
+          document.getElementById('player').value = 'Virat Kohli';
+          document.getElementById('number').value = '';
+          document.getElementById('activity').value = 'cheering at home';
+          document.getElementById('nameError').style.display = 'none';
+          document.getElementById('mobileError').style.display = 'none';
+          document.getElementById('numberError').style.display = 'none';
+        }
+
+        // Ensure button has event listeners for click and touch
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) {
+          generateBtn.addEventListener('click', generateRitual);
+          generateBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            console.log('Touch event fired');
+            generateRitual();
+          });
+        } else {
+          console.error('Generate button not found');
+          if (fallbackMessage) fallbackMessage.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        const fallbackMessage = document.getElementById('fallbackMessage');
+        if (fallbackMessage) fallbackMessage.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
